@@ -1,0 +1,347 @@
+ADD F;  \This program will be for controlling a custom built radial arm maze
+\This test assesss the rats ability to remember a list of spatial locations
+\The maze consists of 8 auto guillotine doors (outputs) and 8 head entry detector (inputs) devices
+
+\At the begining of the session all guillotine doors will be open
+\A subsequent head entry into any of the head entry detectors at the end of the arms will cause the 7 non-entered arm guillotine doors to close
+\Once the rat returns to the central platform the door to the arm that was chosen is closed, confining the rat to
+\ the central platform for a specified delay interval (set to 10 seconds)
+\After a delay interval all of the doors are raised again and the procedure is repeated until criterion is reached
+
+\ A training session will end when one of the following conditions is met:
+\     (1) The animal has visited all 8 arms
+\     (2) The animal has made 16 visits total
+\     (3) The session has lasted for more than 10 minutes
+
+\ Errors are defined as the rat going back into a previously visited arm
+
+\ INPUTS
+^ARM1 = 1
+^ARM2 = 2
+^ARM3 = 3
+^ARM4 = 4
+^ARM5 = 5
+^ARM6 = 6
+^ARM7 = 7
+^ARM8 = 8
+
+\ OUTPUTS
+^DOOR1 = 1
+^DOOR2 = 2
+^DOOR3 = 3
+^DOOR4 = 4
+^DOOR5 = 5
+^DOOR6 = 6
+^DOOR7 = 7
+^DOOR8 = 8
+
+\ Z-PULSES
+^Z_ALLDOORS = 1
+
+\ K-PULSES
+^K_DOOR1 = 1
+^K_DOOR2 = 2
+^K_DOOR3 = 3
+^K_DOOR4 = 4
+^K_DOOR5 = 5
+^K_DOOR6 = 6
+^K_DOOR7 = 7
+^K_DOOR8 = 8
+
+
+\ PROGRAM VARIABLES
+VAR_ALIAS Session Time (min)   = A(0)
+VAR_ALIAS Delay Interval (sec) = A(1)
+VAR_ALIAS Maximum Trials       = A(2)
+VAR_ALIAS Time Out Time (min)  = A(3)
+
+^SESSIONTIME = 4
+^DELAY       = 5
+^MAXTRIALS   = 6
+^TIMEOUTTIME = 7
+
+
+\ C ARRAY VALUES (FROM #R's)
+\ ARM 1 ENTERED = C(0)
+\ ARM 2 ENTERED = C(1)
+\ ARM 3 ENTERED = C(2)
+\ ARM 4 ENTERED = C(3)
+\ ARM 5 ENTERED = C(4)
+\ ARM 6 ENTERED = C(5)
+\ ARM 7 ENTERED = C(6)
+\ ARM 8 ENTERED = C(7)
+
+\ ADDITIONAL VARIABLES
+\ SESSION TIMER     = N
+\ HE TIMER          = T
+\ TOTAL ERROR COUNT = V
+\ HE TRIAL TIMER    = Z
+\ TOTAL TRIAL COUNT = W
+
+\ SET DIM
+DIM A = 8   \ PROGRAM VARIABLES
+DIM B = 16  \ SHOWS ORDER OF ARM ENTRIES
+DIM C = 8   \ COUNTS ALL ARM ENTRIES FOR PROGRAM PARAMETERS
+DIM D = 16  \ TIME OF ENTRY INTO ARM 1
+DIM E = 16  \ TIME OF ENTRY INTO ARM 2
+DIM F = 16  \ TIME OF ENTRY INTO ARM 3
+DIM G = 16  \ TIME OF ENTRY INTO ARM 4
+DIM H = 16  \ TIME OF ENTRY INTO ARM 5
+DIM J = 16  \ TIME OF ENTRY INTO ARM 6
+DIM L = 16  \ TIME OF ENTRY INTO ARM 7
+DIM M = 16  \ TIME OF ENTRY INTO ARM 8
+DIM X = 16  \ LIST TIME OF ALL HE IN ONE ARRAY
+DIM Y = 16  \ LIST TIME OF EACH INDIVIDUAL TRIAL
+
+
+\*******************************************************************************************************************************************************
+\+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+\*******************************************************************************************************************************************************
+
+\************************************
+\           MAIN PROGRAM
+\************************************
+
+S.S.1,
+S1,         \ send start signal, variables are set, all doors open
+
+  0.01": SET A(0) = 10;
+         SET A(1) = 10;
+         SET A(2) = 16;
+         SET A(3) = 2 ---> S2
+
+S2,
+  #START: SET A(^SESSIONTIME) = A(0) * 1';
+          SET A(^DELAY)       = A(1) * 1";
+          SET A(^MAXTRIALS)   = A(2);
+          SET A(^TIMEOUTTIME) = A(3) * 1' ---> S3
+
+S3,  \ wait for end of delay time, open all doors, go to state 3
+
+   A(^DELAY)#T: #Z1; #Z2 ---> S4
+
+S4,        \ a head entry into any of the arms will close all unoccupied arms and record a HE and time point for the entered arm
+
+  #R1: OFF 2, 3, 4, 5, 6, 7, 8;
+       ADD C(0); SHOW 1,  Arm 1 Entered, C(0);
+       SHOW 2,  Time Entered, N/60;
+       SET D(I) = T; ADD I; ADD W;
+       IF C(0) > 1 [@ERROR, @FIRST ENTRY]
+          @ERROR: ADD V; SHOW 3, Error Count, C(0)-1 ---> S5
+          @FIRST: ---> S5
+
+  #R2: OFF 1, 3, 4, 5, 6, 7, 8;
+       ADD C(1); SHOW 6,  Arm 2 Entered, C(1);
+       SHOW 7,  Time Entered, N/60;
+       SET E(I) = T; ADD I; ADD W;
+       IF C(1) > 1 [@ERROR, @FIRST ENTRY]
+          @ERROR: ADD V; SHOW 8, Error Count, C(1)-1 ---> S5
+          @FIRST: ---> S5
+
+  #R3: OFF 1, 2, 4, 5, 6, 7, 8;
+       ADD C(2); SHOW 11, Arm 3 Entered, C(2);
+       SHOW 12, Time Entered, N/60;
+       SET F(I) = T; ADD I; ADD W;
+       IF C(2) > 1 [@ERROR, @FIRST ENTRY]
+          @ERROR: ADD V; SHOW 13, Error Count, C(2)-1 ---> S5
+          @FIRST: ---> S5
+
+  #R4: OFF 1, 2, 3, 5, 6, 7, 8;
+       ADD C(3); SHOW 16, Arm 4 Entered, C(3);
+       SHOW 17, Time Entered, N/60;
+       SET G(I) = T; ADD I; ADD W;
+       IF C(3) > 1 [@ERROR, @FIRST ENTRY]
+          @ERROR: ADD V; SHOW 18, Error Count, C(3)-1 ---> S5
+          @FIRST: ---> S5
+
+  #R5: OFF 1, 2, 3, 4, 6, 7, 8;
+       ADD C(4); SHOW 21, Arm 5 Entered, C(4);
+       SHOW 22, Time Entered, N/60;
+       SET H(I) = T; ADD I; ADD W;
+       IF C(4) > 1 [@ERROR, @FIRST ENTRY]
+          @ERROR: ADD V; SHOW 23, Error Count, C(4)-1 ---> S5
+          @FIRST: ---> S5
+
+  #R6: OFF 1, 2, 3, 4, 5, 7, 8;
+       ADD C(5); SHOW 26, Arm 6 Entered, C(5);
+       SHOW 27, Time Entered, N/60;
+       SET J(I) = T; ADD I; ADD W;
+       IF C(5) > 1 [@ERROR, @FIRST ENTRY]
+          @ERROR: ADD V;  SHOW 28, Error Count, C(5)-1 ---> S5
+          @FIRST: ---> S5
+
+  #R7: OFF 1, 2, 3, 4, 5, 6, 8;
+       ADD C(6); SHOW 31, Arm 7 Entered, C(6);
+       SHOW 32, Time Entered, N/60;
+       SET L(I) = T; ADD I; ADD W;
+       IF C(6) > 1 [@ERROR, @FIRST ENTRY]
+          @ERROR: ADD V; SHOW 33, Error Count, C(6)-1 ---> S5
+          @FIRST: ---> S5
+
+  #R8: OFF 1, 2, 3, 4, 5, 6, 7;
+       ADD C(7); SHOW 36, Arm 8 Entered, C(7);
+       SHOW 37, Time Entered, N/60;
+       SET M(I) = T; ADD I; ADD W;
+       IF C(7) > 1 [@ERROR, @FIRST ENTRY]
+          @ERROR: ADD V; SHOW 38, Error Count, C(7)-1 ---> S5
+          @FIRST: ---> S5
+
+  A(^TIMEOUTTIME)#T: SHOW 56, Timed Out, A(^TIMEOUTTIME) ---> STOPABORTFLUSH
+
+
+S5,   \ After rat re-enters the center the experimenter will issue a K-pulse closing the
+      \ the previously entered arm
+
+  #K1: OFF 1, 2, 3, 4, 5, 6, 7, 8; ---> S6
+
+S6,   \ Take a count of the total arm entries and continue or end the program
+
+  0.01": IF (C(0) + C(1) + C(2) + C(3) + C(4) + C(5) + C(6) + C(7) + C(8)) < A(^MAXTRIALS) [@CONTINUE, @MAXTRIALS]
+         @CONTINUE: ---> S7
+         @MAXTRIALS: SHOW 41, Total Trials, (C(0) + C(1) + C(2) + C(3) + C(4) + C(5) + C(6) + C(7) + C(8)) ---> STOPABORTFLUSH
+
+
+S7,   \ check if 8 arm entries
+
+    0.01": IF (C(0) >= 1) AND (C(1) >= 1) AND (C(2) >= 1) AND (C(3) >= 1) AND (C(4) >= 1) AND (C(5) >= 1) AND (C(6) >= 1) AND (C(7) >= 1) [@TRUE, @FALSE]
+           @TRUE: SHOW 41, Total Trials, (C(0) + C(1) + C(2) + C(3) + C(4) + C(5) + C(6) + C(7) + C(8)) ---> STOPABORTFLUSH
+           @FALSE: ---> S3
+
+\*****************************************
+\            DOOR CONTROLLER
+\*****************************************
+S.S.2,
+S1,
+
+  #Z1: ON 1, 2, 3, 4, 5, 6, 7, 8 ---> SX
+
+\*********************************************
+\       SESSION TIMER (SHOWN IN MINUTES)
+\*********************************************
+S.S.3,
+S1,
+
+  #START: SHOW 46, Session Timer, N/60 ---> S2
+
+S2,
+  1": ADD N; SHOW 46, Session Timer, N/60;
+         IF N/60 >= A(0) [@TURE, @FALSE]
+            @TRUE: SHOW 41, Total Trials, (C(0) + C(1) + C(2) + C(3) + C(4) + C(5) + C(6) + C(7) + C(8)) ---> STOPABORTFLUSH
+            @FALSE: ---> SX
+
+\*************************************************
+\     COUNT TIME INTERVAL (SHOWN IN SECONDS)
+\*************************************************
+S.S.4,
+S1,
+  #START: ---> S2
+
+S2,
+ 1": SET T = T + 0.01" ---> SX
+
+\****************************************
+\        COUNT TOTAL ERRORS
+\****************************************
+S.S.5,
+S1,
+ #START: ---> S2
+
+S2,
+  0.01": SHOW 43, Total Errors, V ---> SX
+
+\********************************************************
+\   LIST TIME OF ENTRIES IN ONE ARRAY  (SHOWN IN SECONDS)
+\********************************************************
+S.S.6,
+S1,
+  #START: ---> S2
+
+S2,
+  #R1 ! #R2 ! #R3 ! #R4 ! #R5 ! #R6 ! #R7 ! #R8: SET X(I) = T;
+                      SHOW 41, Total Trials, (C(0) + C(1) + C(2) + C(3) + C(4) + C(5) + C(6) + C(7) + C(8));
+                      SHOW 48, % Error, V/W *100 ---> SX
+
+\******************************************************************************************
+\      LIST TRIAL TIMES IN ONE ARRAY  (SHOWN IN SECONDS RELATIVE TO END OF DELAY TIME A(1))
+\******************************************************************************************
+S.S.7,
+S1,
+  #Z2: ---> S2
+
+S2,
+  #R1 ! #R2 ! #R3 ! #R4 ! #R5 ! #R6 ! #R7 ! #R8: SET Y(I) = Z - A(1), Z = 0 ---> S1
+
+
+\*************************************************
+\       COUNT INTERVAL FOR TRIALS
+\************************************************
+S.S.8,
+S1,
+  #START: ---> S2
+
+S2,
+  1": SET Z = Z + 0.01" ---> SX
+
+\**************************************************
+\          RECORD ORDER
+\**************************************************
+S.S.9,
+S1,
+ #START: ---> S2
+
+ S2,
+ 0.01":  SHOW 61, Order Entered, B(0);
+         SHOW 66, 1st, B(1);
+         SHOW 71, 2nd, B(2);
+         SHOW 76, 3rd, B(3);
+         SHOW 81, 4th, B(4);
+         SHOW 86, 5th, B(5);
+         SHOW 91, 6th, B(6);
+         SHOW 96, 7th, B(7);
+         SHOW 101, 8th, B(8);
+         SHOW 67, 9th, B(9);
+         SHOW 72, 10th, B(10);
+         SHOW 77, 11th, B(11);
+         SHOW 82, 12th, B(12);
+         SHOW 87, 13th, B(13);
+         SHOW 92, 14th, B(14);
+         SHOW 97, 15th, B(15);
+         SHOW 102, 16th, B(16) ---> S3
+
+
+S3,
+   #R1: SET B(I) = 1, ---> S2
+   #R2: SET B(I) = 2, ---> S2
+   #R3: SET B(I) = 3, ---> S2
+   #R4: SET B(I) = 4, ---> S2
+   #R5: SET B(I) = 5, ---> S2
+   #R6: SET B(I) = 6, ---> S2
+   #R7: SET B(I) = 7, ---> S2
+   #R8: SET B(I) = 8, ---> S2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

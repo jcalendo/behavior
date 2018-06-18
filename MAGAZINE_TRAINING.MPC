@@ -1,0 +1,113 @@
+\ This is a program for magazine training
+\ Filename: Magazine Training.MPC
+\ Date: 9/9/2014 written by Gennaro Calendo
+
+\ Inputs
+^Lever1 = 1
+^Lever2 = 2
+^Lever3 = 3
+^Lever4 = 4
+^Lever5 = 5
+^HeadEntry = 6
+
+\ Outputs
+^Lever1Out = 6
+^Lever2Out = 7
+^Lever3Out = 8
+^Lever4Out = 9
+^Lever5Out = 10 
+^Pellet = 11
+^Houselight = 13
+^Receptaclelight = 14
+
+^Free_Pellets = 0
+^Interval = 1
+^Levers = 2
+^Acclim = 3
+
+\ Variables
+Var_Alias Free Pellets = A(0)
+Var_Alias Delivery Interval Time (sec) = A(1)
+Var_Alias Levers ON OFF (1=yes, 2=no) = A(2)
+Var_Alias Acclimation Time (min) = A(3) 
+
+\ Data Count
+\ B(0)  = Total Head Entries 
+\ B(1) = Total Pellets Dispensed
+\ B(2) = Total Lever Presses
+
+\ Z_Pulses
+^Z_Start = 1
+^Z_Pellet = 2
+^Z_Continue = 3
+
+
+DIM A = 4
+DIM B = 3
+
+\**************************************************************
+\                    Set Variables       
+\**************************************************************
+S.S.1,
+S1, 
+   0.01":   SET A(^Free_Pellets) = 20;
+            SET A(^Interval)     = 60"; 
+            SET A(^Levers)       = 1;
+            SET A(^Acclim)       = 2  ---> S2
+S2, 
+  #START:  IF A(^Levers) = 1 [@LeversON, @@LeversOFF]
+              @LeversON: ON ^Lever1Out, ^Lever2Out, ^Lever3Out, ^Lever4Out, ^Lever5Out; ---> S3
+              @LeverOFF: IF A(^Levers) = 2 [@LeversOFF, @Abort]
+                             @LeversOFF: ---> S3
+                             @Abort: SET Y = 99999 ---> STOPABORTFLUSH  
+S3,   
+  0.01":  SET S = S + 0.01;
+          SHOW 4,Acclimation,S/60;
+           IF S/60 >= A(^Acclim) [@StartTraining, @ContinueTiming]
+             @Start: CLEAR 4,200; Z^Z_Start---> SX 
+             @Cont: ON ^Houselight ---> SX
+
+
+\************************************************************
+\                     Count Head Entries
+\************************************************************
+S.S.2,                                                   
+S1, 
+   #R^HeadEntry: ADD B(0); SHOW 2, Head Entries, B(0) ---> SX
+
+
+
+\*************************************************************
+\                    Count Lever Presses
+\*************************************************************
+S.S.3,  
+S1,
+   #R^Lever1 ! #R^Lever2 ! #R^Lever3 ! #R^Lever4 ! #R^Lever5: ADD B(2); 
+   SHOW 3, Total Lever Presses, B(2) ---> SX 
+
+
+
+\*************************************************************
+\                     Magazine Training
+\*************************************************************  
+S.S.4,                                                     
+S1, 
+   #Z^Z_Start: Z^Z_Pellet; ON ^Receptaclelight; ---> S3
+S2, 
+   0.01": Z^Z_Pellet ---> S3
+S3, 
+   0.01": OFF ^Pellet ---> S4
+S4,
+   A(^Interval)#T: IF B(1) = A(^Free_Pellets) [@End, @Continue]                          
+                            @End: ---> STOPABORTFLUSH
+                            @Continue: ---> S2
+
+
+\**************************************************************
+\                  Pellet Dispenser Control
+\**************************************************************
+S.S.5,
+S1, 
+   #Z^Z_Pellet: ON ^Pellet; ADD B(1); SHOW 1, Pellets Dispensed, B(1) ---> SX
+
+                         

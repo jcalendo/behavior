@@ -1,0 +1,439 @@
+\ Copyright (C) 2014 MED Associates, All rights reserved.
+
+\ Visual Cue Discrimination.mpc
+\
+\ 5-7-14
+\ Written for: Sara Jane Ward
+\              Temple University
+\              3420 North Broad St.
+\              Philadelphia, PA 19140
+\              Email: SaraWard@temple.edu
+\              Phone: 215-707-6112
+\
+\ When the program is started it will draw a value from List Z and turn on the
+\ selected stimulus light for the Stimulus Length.  At the end of the Stimulus
+\ Length the program will turn the House Light on and extend both levers.  The
+\ animal will then have the Lever Response Time to respond to the Correct Lever.
+\
+\ If the Stimulus Light Correct variable is set to 1-Yes, then the animal must
+\ respond to the lever with the illuminated stimulus light.  If the Stimulus
+\ Light Correct variable is set to 0-No, then the animal must respond to the
+\ lever with the non-illuminated stimulus light.
+\
+\ If the animal does not respond on either lever, then at the end of the Lever
+\ Response Time the House Light and Stimulus Light will be turned off, the
+\ levers will be retracted, an omission will be recorded, and the animal will
+\ remain in darkness for the rest of the Trial Length.  At the end of the Trial
+\ Length the program will draw a new value from List Z and turn on the selected
+\ stimulus light for the Stimulus Length.  At the end of the Stimulus Length the
+\ program will turn the House Light on and extend both levers.  The animal will
+\ once again have the Lever Response Time to respond to the Correct Lever.
+\
+\ If the animal responds to the incorrect lever, then the House Light and
+\ Stimulus Light will be turned off, the levers will be retracted, an incorrect
+\ response will be recorded, and the animal will remain in darkness for the rest
+\ of the Trial Length.  At the end of the Trial Length the program will draw a
+\ new value from List Z and turn on the selected stimulus light for the Stimulus
+\ Length.  At the end of the Stimulus Length the program will turn the House
+\ Light on and extend both levers.  The animal will once again have the Lever
+\ Response Time to respond to the Correct Lever.
+\
+\ If the animal responds to the Correct Lever, then the program will turn off
+\ the Stimulus Light, retract the levers, a pellet reinforcer will be delivered,
+\ and the House Light will continue to remain on for the Reward Length.  At the
+\ end of the Reward Length the House Light will be turned off for the remainder
+\ of the Trial Length.  At the end of the Trial Length the program will draw a
+\ new value from List Z and turn on the selected stimulus light for the Stimulus
+\ Length.  At the end of the Stimulus Length the program will turn the House
+\ Light on and extend both levers.  The animal will once again have the Lever
+\ Response Time to respond to the Correct Lever.
+\
+\ When the animal retrieves the pellet a Head Entry will be counted.
+\
+\ The animal does not have to retrieve the pellet in order for the next Trial to
+\ start.  A new Trial will start every time the Trial Length expires regardless
+\ of responses on the levers or Head Entries.
+\
+\
+\ The program will end when one of the following happens:
+\
+\ 1) The Minimum Number of Trials has been reached and the Performance Criteria
+\    has been met.  Omission Trials are excluded from this count.
+\ 2) The Maximum Number of Trials has been reached.
+\
+\ Whichever comes first.
+\
+\
+\ SoftCR Data is Recorded in Relative Mode with a 10ms Resolution.
+
+
+\ Inputs
+^Lever1    = 1
+^Lever2    = 2
+^HeadEntry = 6
+
+\ Outputs
+^Lever1Out  = 1
+^Lever1Stim = 2
+^Lever2Out  = 3
+^Lever2Stim = 4
+^Pellet     = 11
+^HouseLight = 13
+
+
+\ A() = Control Variables with Assigned Aliases as Defined
+Var_Alias Max Number of Trials                 = A(0)  \ Default = 150
+Var_Alias Min Number of Trails                 = A(1)  \ Default = 30
+Var_Alias Performance Criterion                = A(2)  \ Default = 10 Consecutive Correct Trials
+Var_Alias Stimulus Length (sec)                = A(3)  \ Default = 3 seconds
+Var_Alias Trial Length (sec)                   = A(4)  \ Default = 20 seconds
+Var_Alias Lever Response Time (sec)            = A(5)  \ Default = 10 seconds
+Var_Alias Reward Length (sec)                  = A(6)  \ Default = 4 seconds
+Var_Alias Stimulus Light Correct (1=Yes  0=No) = A(7)  \ Default = 1-Stimulus Light is Correct
+Var_Alias SoftCR Data Array (1=Yes  0=No)      = A(8)  \ Default = 1-Yes
+
+^MaxTrials    = 0
+^MinTrials    = 1
+^Criterion    = 2
+^StimLen      = 3
+^TrialLen     = 4
+^RespTime     = 5
+^RewardLen    = 6
+^LightCorrect = 7
+^SoftCR       = 8
+^StimTicks    = 9
+^TrialTicks   = 10
+^RespTicks    = 11
+^RewardTicks  = 12
+
+
+\ List Data Variables Here
+\  B() = Session Totals
+\  B(0) = Total Trials Run
+\  B(1) = Total Head Entries
+\  B(2) = Total Correct   Trials
+\  B(3) = Total Incorrect Trials
+\  B(4) = Total Omission  Trials
+\  B(5) = Average Latency to Correct   Lever Press
+\  B(6) = Average Latency to Incorrect Lever Press
+\  B(7) = Total Reinforcers Earned
+\
+\  C() = IRT Array and Event Pen Code for Soft Cum. Recorder
+\
+\  D() = Trial by Trial Data
+\  D(J)   = Trial Number
+\  D(J+1) = Stimulus Light (1=Lever 1  2=Lever 2)
+\  D(J+2) = Correct   Tag
+\  D(J+3) = Incorrect Tag
+\  D(J+4) = Omission  Tag
+\  D(J+5) = Latency to Lever Press (0 for Omission)
+\
+\  S = Elapsed Time in Session
+
+
+\ List Working Variables Here
+\  E = Correct Response Lever
+\  I = Subscript for the IRT Array C
+\  J = Index into Trial by Trial Data Array D
+\
+\  L() = Latency Counters
+\  L(0) = Latency to Lever Press Timer
+\  L(1) = Total Latency to Correct   Lever Press
+\  L(2) = Total Latency to Incorrect Lever Press
+\
+\  P   = Performance Criteria
+\  T   = Elapsed Time in 0.01 sec Increments for SoftCR Data
+\  Z() = Stimulus Lights List
+
+
+DIM A = 12
+DIM B = 7
+^CArraySize = 10000  \ Change this Variable also when modifying the C array size.
+DIM C = 10000
+DIM D = 1000
+DIM L = 2
+
+LIST Z = 1, 2  \ Stimulus Lights List
+
+
+\ Z-Pulses Used in this Program
+^Z_StartTrial = 1   \ Signal Start of Trial
+^Z_Pellet     = 2   \ Signal Pellet Reinforcement
+^Z_Correct    = 3   \ Signal Correct   Response
+^Z_Incorrect  = 4   \ Signal Incorrect Response
+^Z_Omission   = 5   \ Signal Omission
+^Z_End        = 32  \ Signal End of Session
+
+
+DISKCOLUMNS = 6
+
+
+\**********************************************************
+\            Visual Cue Discrimination Schedule
+\ S1 - Set Default Values
+\  Max Number of Trials    (150)
+\  Min Number of Trails    (30)
+\  Performance Criterion   (10 Consecutive Correct Trials)
+\  Stimulus Length         (3 seconds)
+\  Trial Length            (20 seconds)
+\  Lever Response Time     (10 seconds)
+\  Reward Length           (4 seconds)
+\  Stimulus Light Correct  (1-Stimulus Light is Correct)
+\  SoftCR Data Array       (1-Yes)
+\**********************************************************
+S.S.1,
+S1,
+  0.01": SET A(^MaxTrials) = 150, A(^MinTrials)    = 30, A(^Criterion) = 10;
+         SET A(^StimLen)   = 3,   A(^TrialLen)     = 20, A(^RespTime)  = 10;
+         SET A(^RewardLen) = 4,   A(^LightCorrect) = 1,  A(^SoftCR)    = 1;
+         SET C(I) = -987.987;
+         SET D(J) = -987.987 ---> S2
+
+S2,     \ First Statement: Wait for START signal.
+        \
+        \ Second Statement: Update screen display with default values
+        \ for Control Variables.  This will show any changes made via
+        \ the "Configure | Change Variables" Window prior to START.
+  #START: CLEAR 1,200;
+          SET A(^StimTicks)   = A(^StimLen)   * 1";
+          SET A(^TrialTicks)  = A(^TrialLen)  * 1";
+          SET A(^RespTicks)   = A(^RespTime)  * 1";
+          SET A(^RewardTicks) = A(^RewardLen) * 1";
+          SHOW 1,Session,S/60;
+          Z^Z_StartTrial ---> S3
+  1": SHOW 1,Max Trials,A(^MaxTrials),    2,Min Trials,A(^MinTrials),        3,Criterion,A(^Criterion);
+      SHOW 4,Stim Len,A(^StimLen),        5,Trial Length,A(^TrialLen),       6,Response Time,A(^RespTime);
+      SHOW 7,Reward Length,A(^RewardLen), 8,Light Correct,A(^Light Correct), 9,SoftCR,A(^SoftCR) ---> SX
+
+S3,     \ Time Session Length
+  0.01": SET S = S + 0.01;
+         SHOW 1,Session,S/60 ---> SX
+  #Z^Z_End: ---> S4
+
+S4,     \ Wait for Screen Update and end with
+        \ STOPABORTFLUSH for Automatic Data Saving
+  2": ---> STOPABORTFLUSH
+
+
+\***************************************************
+\                   MAIN PROGRAM
+\***************************************************
+S.S.2,
+S1,     \ Wait for Start of Trial
+        \ Draw Lever1Stim or Lever2Stim from List Z
+        \ Turn on Stimulus Light over Selected Lever
+  #Z^Z_StartTrial: ADD B(0);
+                   SET   D(J)   = B(0);
+                   RANDD D(J+1) = Z;
+                   SET   D(J+6) = -987.987;
+                   IF D(J+1) = 1 [@Lever1Stim, @Lever2Stim]
+                      @Lever1Stim: ON ^Lever1Stim ---> S2
+                      @Lever2Stim: ON ^Lever2Stim ---> S2
+
+S2,     \ Time Stimulus Length
+  A(^StimTicks)#T: ON ^Lever1Out, ^Lever2Out, ^HouseLight;
+                   IF A(^LightCorrect) = 1 [@LightCorrect, @LightIncorrect]
+                      @LightCorrect:   IF D(J+1) = 1 [@Lever1, @Lever2]
+                                          @Lever1: SET E = ^Lever1 ---> S3
+                                          @Lever2: SET E = ^Lever2 ---> S3
+                      @LightIncorrect: IF D(J+1) = 1 [@Lever2, @Lever1]
+                                          @Lever2: SET E = ^Lever2 ---> S3
+                                          @Lever1: SET E = ^Lever1 ---> S3
+
+S3,     \ Wait for Correct or Incorrect Response
+        \ If No Response Turn off House Light
+        \ Correct   Trials Add   Performance Counter
+        \ Incorrect Trials Reset Performance Counter
+        \ Omission  Trials No Affect
+  #RE:             ADD B(2), D(J+2), P;
+                   OFF ^Lever1Stim, ^Lever2Stim;
+                   OFF ^Lever1Out,  ^Lever2Out;
+                   Z^Z_Correct;     Z^Z_Pellet ---> S4
+  #R^Lever1:       ADD B(3), D(J+3); SET P = 0;
+                   OFF ^Lever1Stim, ^Lever2Stim;
+                   OFF ^Lever1Out,  ^Lever2Out;
+                   OFF ^HouseLight;
+                   Z^Z_Incorrect ---> S5
+  #R^Lever2:       ADD B(3), D(J+3); SET P = 0;
+                   OFF ^Lever1Stim, ^Lever2Stim;
+                   OFF ^Lever1Out,  ^Lever2Out;
+                   OFF ^HouseLight;
+                   Z^Z_Incorrect ---> S5
+  A(^RespTicks)#T: ADD B(4), D(J+4);
+                   OFF ^Lever1Stim, ^Lever2Stim;
+                   OFF ^Lever1Out,  ^Lever2Out;
+                   OFF ^HouseLight;
+                   Z^Z_Omission ---> S5
+
+S4,     \ Time Reward Length
+        \ Turn OFF House Light at End of Reward Length
+  A(^RewardTicks)#T: OFF ^HouseLight ---> S5
+
+S5,     \ Check for End of Session
+  0.01": IF (B(0) >= A(^MinTrials)) AND (P >= A(^Criterion)) [@EndSession, @Next]
+            @End: Z^Z_End ---> S1
+            @Next: IF B(0) >= A(^MaxTrials) [@EndSession, @Cont]
+                      @End: Z^Z_End ---> S1
+                      @Cont: SET J = J + 6 ---> S1
+
+
+\***************************************************
+\                TRIAL LENGTH TIMER
+\***************************************************
+S.S.3,
+S1,
+  #Z^Z_StartTrial: ---> S2
+
+S2,     \ Time the Trial Length
+  A(^TrialTicks)#T: Z^Z_StartTrial ---> S2
+  #Z^Z_End: ---> S1
+
+
+\***************************************************
+\               REWARD CONTROL TIMER
+\***************************************************
+S.S.4,
+S1,
+  #Z^Z_Pellet: ON ^Pellet; ADD B(7) ---> S2
+
+S2,     \ Time Reward Device for 0.05 seconds
+  0.05": OFF ^Pellet ---> S1
+
+
+\***************************************************
+\              LATENCY TO LEVER PRESS
+\***************************************************
+S.S.5,
+S1,     \ Wait for Start of Trial
+  #Z^Z_StartTrial: ---> S2
+
+S2,     \ Wait for Stimulus Length to End
+  A(^StimTicks)#T: SET L(0) = 0 ---> S3
+
+S3,     \ Wait for Correct, Incorrect or Omission Signal
+  0.01": SET L(0) = L(0) + 0.01 ---> SX
+  #Z^Z_Correct:   SET D(J+5) = L(0);
+                  SET L(1)   = L(1) + L(0) ---> S4
+  #Z^Z_Incorrect: SET D(J+5) = L(0);
+                  SET L(2)   = L(2) + L(0) ---> S4
+  #Z^Z_Omission: ---> S1
+
+S4,     \ Calculate Average Latency to Correct Lever Press
+  0.01": IF B(2) > 0 [@Calculate, @NoCalculate]
+            @Calc: SET B(5) = L(1) / B(2) ---> S5
+            @NoCalc: ---> S5
+
+S5,     \ Calculate Average Latency to Incorrect Lever Press
+  0.01": IF B(3) > 0 [@Calc, @NoCalc]
+            @Calc: SET B(6) = L(2) / B(3) ---> S1
+            @NoCalc: ---> S1
+
+
+\***************************************************
+\                HEAD ENTRY COUNTER
+\***************************************************
+S.S.6,
+S1,     \ Wait for Start of First Trial
+  #Z^Z_StartTrial: ---> S2
+
+S2,
+  #R^HeadEntry: ADD B(1) ---> SX
+  #Z^Z_End: ---> S1
+
+
+\***************************************************
+\                  UPDATE DISPLAY
+\***************************************************
+S.S.7,
+S1,
+  #Z^Z_StartTrial: SHOW 2,Tot Correct,B(2),    3,Tot Incorrect,B(3), 4,Omissions,B(4);
+                   SHOW 5,Head Entries,B(1),   6,Trial #,B(0),       7,Avg Lat Corr,B(5);
+                   SHOW 8,Avg Lat Incorr,B(6), 10,Reinforcers,B(7) ---> S2
+
+S2,
+  1": SHOW 2,Tot Correct,B(2),    3,Tot Incorrect,B(3), 4,Omissions,B(4);
+      SHOW 5,Head Entries,B(1),   6,Trial #,B(0),       7,Avg Lat Corr,B(5);
+      SHOW 8,Avg Lat Incorr,B(6), 10,Reinforcers,B(7) ---> S2
+
+
+\***************************************************
+\     INCREMENT TIME T FOR IRT AND EVENT ARRAY
+\***************************************************
+S.S.8,
+S1,
+  #START: IF A(^SoftCR) > 0 [] ---> S2
+
+S2,
+  0.01": ADD T ---> SX
+  #Z^Z_End: ---> S1
+
+
+\***********************************************************
+\ ADD A STEP 0 ELEMENT TO ARRAY C FOR EACH CORRECT RESPONSE
+\***********************************************************
+S.S.9,
+S1,
+  #START:IF A(^SoftCR) > 0 [] ---> S2
+
+S2,     \ Record Correct Responses
+  #Z^Z_Correct: IF I <= ^CArraySize [@True, @False]
+                   @True: SET C(I) = T + 0.10, T = 0; ADD I;
+                          IF I <= ^CArraySize [@True, @False]
+                             @True: SET C(I) = -987.987 ---> SX
+                             @False: ---> S1
+                   @False: ---> S1
+
+
+\***************************************************
+\  ADD A PIP 0 ELEMENT TO ARRAY C FOR EACH REWARD
+\***************************************************
+S.S.10,
+S1,
+  #START: IF A(^SoftCR) > 0 [] ---> S2
+
+S2,     \ Record Rewards
+  #Z^Z_Pellet: IF I <= ^CArraySize [@True, @False]
+                  @True: SET C(I) = T + 0.20, T = 0; ADD I;
+                         IF I <= ^CArraySize [@True, @False]
+                            @True: SET C(I) = -987.987 ---> SX
+                            @False: ---> S1
+                  @False: ---> S1
+
+
+\*****************************************************
+\ ADD A STEP 1 ELEMENT TO ARRAY C FOR EACH HEAD ENTRY
+\*****************************************************
+S.S.11,
+S1,
+  #START: IF A(^SoftCR) > 0 [] ---> S2
+
+S2,     \ Record Head Entries
+  #R^HeadEntry: IF I <= ^CArraySize [@True, @False]
+                   @True: SET C(I) = T + 0.11, T = 0; ADD I;
+                          IF I <= ^CArraySize [@True, @False]
+                             @True: SET C(I) = -987.987 ---> SX
+                             @False: ---> S1
+                   @False: ---> S1
+  #Z^Z_End: ---> S1
+
+
+\***************************************************************
+\ ADD AN EVENT 0 ELEMENT TO ARRAY C FOR EACH INCORRECT RESPONSE
+\***************************************************************
+S.S.12,
+S1,
+  #START: IF A(^SoftCR) > 0 [@SoftCR, @NoSoftCR]
+             @SoftCR: SET C(I) = 0.50, I = I + 1, C(I) = -987.987 ---> S2
+             @NoSoftCR: ---> SX
+
+S2,     \ Lever 1 Incorrect
+  #Z^Z_Incorrect: IF I <= ^CArraySize [@True, @False]
+                     @True: SET C(I) = T + 0.60, T = 0; ADD I;
+                            IF I <= ^CArraySize [@True, @False]
+                               @True: SET C(I) = 0.50; ADD I;
+                                      IF I <= ^CArraySize [@True, @False]
+                                         @True: SET C(I) = -987.987 ---> SX
+                                         @False: ---> S1
+                               @False: ---> S1
+                     @False: ---> S1
+
