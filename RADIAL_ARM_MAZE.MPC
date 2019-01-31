@@ -1,4 +1,4 @@
-ADD F;  \This program will be for controlling a custom built radial arm maze
+\This program will be for controlling a custom built radial arm maze
 \This test assesss the rats ability to remember a list of spatial locations
 \The maze consists of 8 auto guillotine doors (outputs) and 8 head entry detector (inputs) devices
 
@@ -318,30 +318,3 @@ S3,
    #R6: SET B(I) = 6, ---> S2
    #R7: SET B(I) = 7, ---> S2
    #R8: SET B(I) = 8, ---> S2
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
